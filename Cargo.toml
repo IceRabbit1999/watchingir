@@ -1,0 +1,8 @@
+[workspace]
+
+resolver = "2"
+
+members = ["crates/*"]
+
+[workspace.dependencies]
+tracing = "0.1.41"
