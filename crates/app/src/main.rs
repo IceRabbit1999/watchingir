@@ -9,10 +9,8 @@ use tracing_subscriber::{
 
 mod ui;
 
-#[tokio::main]
-async fn main() {
+fn main() {
     init_log();
-    let setting = global_setting();
     ui::launch().expect("Failed to start the app");
 }
 
