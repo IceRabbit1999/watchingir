@@ -4,6 +4,7 @@ use eframe::{
 };
 use tracing::info;
 
+#[derive(Default)]
 pub struct SteamApiKeyModal {
     pub key: String,
     pub completed: bool,
@@ -33,15 +34,6 @@ impl SteamApiKeyModal {
                     },
                 )
             });
-        }
-    }
-}
-
-impl Default for SteamApiKeyModal {
-    fn default() -> Self {
-        Self {
-            key: Default::default(),
-            completed: false,
         }
     }
 }

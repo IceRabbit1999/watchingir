@@ -5,4 +5,8 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.dependencies]
+anyhow = "1.0.94"
+serde = { version = "1.0.216", features = ["derive"] }
+tokio = { version = "1.42.0", features = ["rt-multi-thread", "rt", "macros"] }
 tracing = "0.1.41"
+

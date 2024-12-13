@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-reqwest = "0.12.9"
+reqwest = { version = "0.12.9", features = ["json"]}
+
+anyhow.workspace = true
+serde.workspace = true
+tokio.workspace = true
 
 common = { path = "../common" }

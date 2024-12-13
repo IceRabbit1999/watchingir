@@ -1,4 +1,5 @@
 use eframe::egui;
+use tracing::info;
 
 use crate::ui::modal::SteamApiKeyModal;
 
@@ -7,6 +8,9 @@ pub struct LeftPanel {
     key_modal: SteamApiKeyModal,
     menu: Menu,
 }
+
+pub struct MainPanel {}
+
 impl LeftPanel {
     pub fn init() -> Self {
         Self {
@@ -49,11 +53,17 @@ impl LeftPanel {
     // LeftMenuPanel
 }
 
-pub struct Menu {}
+pub struct Menu {
+    latest_matches: bool,
+    friends: bool,
+}
 
 impl Menu {
     fn init() -> Self {
-        Self {}
+        Self {
+            latest_matches: false,
+            friends: false,
+        }
     }
 
     fn show_menu(
@@ -63,9 +73,14 @@ impl Menu {
         egui::SidePanel::left("menu").show_inside(ui, |ui| {
             ui.heading("Menu");
             ui.separator();
-            ui.label("Menu Item 1");
-            ui.label("Menu Item 2");
-            ui.label("Menu Item 3");
+
+            if ui.toggle_value(&mut self.latest_matches, "Latest Matches").clicked() {
+                self.friends = false;
+            }
+
+            if ui.toggle_value(&mut self.friends, "Friends").clicked() {
+                self.latest_matches = false;
+            }
         });
     }
 }
