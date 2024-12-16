@@ -4,10 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-reqwest = { version = "0.12.9", features = ["json"]}
 
-anyhow.workspace = true
+reqwest = { workspace = true, features = ["json"]}
 serde.workspace = true
+snafu.workspace = true
 tokio.workspace = true
+tracing.workspace = true
 
 common = { path = "../common" }
+
+[dev-dependencies]
+dotenvy = "0.15.7"

@@ -4,7 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-config = "0.14.1"
-
+ir_aquila.workspace = true
+reqwest.workspace = true
+snafu.workspace = true
 serde.workspace = true
 tracing.workspace = true
+

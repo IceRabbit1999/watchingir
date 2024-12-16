@@ -1,2 +1,3 @@
 pub mod data;
-pub mod setting;
+pub mod error;
+pub use error::Error;

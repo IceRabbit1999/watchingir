@@ -1,5 +1,3 @@
-use common::setting::global_setting;
-use tracing::info;
 use tracing_subscriber::{
     fmt::{format::Writer, time::FormatTime},
     layer::SubscriberExt,
@@ -7,6 +5,7 @@ use tracing_subscriber::{
     Layer,
 };
 
+mod state;
 mod ui;
 
 fn main() {

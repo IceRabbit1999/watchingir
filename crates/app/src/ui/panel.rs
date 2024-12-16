@@ -1,21 +1,23 @@
 use eframe::egui;
 use tracing::info;
 
-use crate::ui::modal::SteamApiKeyModal;
+use crate::ui::{modal::SteamApiKeyModal, table::MatchDetailTable};
 
 pub struct LeftPanel {
     /// LeftTopPanel
-    key_modal: SteamApiKeyModal,
+    pub key_modal: SteamApiKeyModal,
     menu: Menu,
+    pub account_id: String,
 }
 
-pub struct MainPanel {}
+pub struct MainPanel {
+    pub match_detail: MatchDetailTable,
+}
 
-impl LeftPanel {
-    pub fn init() -> Self {
+impl MainPanel {
+    pub fn new() -> Self {
         Self {
-            key_modal: SteamApiKeyModal::default(),
-            menu: Menu::init(),
+            match_detail: MatchDetailTable::new(),
         }
     }
 
@@ -23,8 +25,24 @@ impl LeftPanel {
         &mut self,
         ctx: &egui::Context,
     ) {
-        self.show_key(ctx);
-        // self.menu.show_menu(ctx);
+        self.match_detail.show(ctx);
+    }
+}
+
+impl LeftPanel {
+    pub fn new() -> Self {
+        Self {
+            key_modal: SteamApiKeyModal::default(),
+            menu: Menu::init(),
+            account_id: Default::default(),
+        }
+    }
+
+    pub fn show(
+        &mut self,
+        ctx: &egui::Context,
+    ) {
+        self.show_config(ctx);
     }
 
     // LeftTopPanel
@@ -36,15 +54,16 @@ impl LeftPanel {
         self.key_modal.init_key(ctx);
     }
 
-    fn show_key(
+    fn show_config(
         &mut self,
         ctx: &egui::Context,
     ) {
-        egui::SidePanel::left("current_key").show(ctx, |ui| {
+        egui::SidePanel::left("current_config").show(ctx, |ui| {
             ui.heading("Watchingir");
             ui.separator();
             ui.label("Current Steam API Key:");
             ui.text_edit_singleline(&mut self.key_modal.key);
+            ui.text_edit_singleline(&mut self.account_id);
             ui.add_space(30.0);
             self.menu.show_menu(ui);
         });
