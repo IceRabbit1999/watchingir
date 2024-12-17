@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+chrono.workspace = true
 ir_aquila.workspace = true
 reqwest.workspace = true
 snafu.workspace = true

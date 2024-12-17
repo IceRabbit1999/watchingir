@@ -47,7 +47,19 @@ pub struct MatchDetailResponse {
     result: MatchDetailResult,
 }
 
-impl MatchDetailResponse {}
+impl MatchDetailResponse {
+    pub fn views(
+        self,
+        account_id: i64,
+    ) -> Vec<MatchDetailView> {
+        let matches = self.result.matches;
+        let vec = matches
+            .into_iter()
+            .map(|m| MatchDetailView::from_match_detail(m, account_id).expect("No account_id matched"))
+            .collect();
+        vec
+    }
+}
 
 #[derive(Deserialize, Debug)]
 struct MatchDetailResult {
@@ -71,17 +83,17 @@ struct MatchDetail {
 }
 
 pub struct MatchDetailView {
-    pub win: bool,
-    pub duration: i32,
-    pub start_time: i64,
-    pub game_mode: GameMode,
-    pub radiant_score: i32,
-    pub dire_score: i32,
+    win: bool,
+    duration: i32,
+    start_time: i64,
+    game_mode: GameMode,
+    radiant_score: i32,
+    dire_score: i32,
     player_detail: PlayerDetail,
 }
 
 impl MatchDetailView {
-    pub fn from_match_detail(
+    fn from_match_detail(
         match_detail: MatchDetail,
         account_id: i64,
     ) -> Result<Self, crate::Error> {
@@ -91,7 +103,7 @@ impl MatchDetailView {
             .find(|p| p.account_id == account_id)
             .context(NoneValueSnafu { expected: "PlayerDetail" })?;
         Ok(Self {
-            win: match_detail.radiant_win,
+            win: match_detail.radiant_win && player_detail.player_slot < 128 || !match_detail.radiant_win && player_detail.player_slot >= 128,
             duration: match_detail.duration,
             start_time: match_detail.start_time,
             game_mode: match_detail.game_mode,
@@ -100,11 +112,39 @@ impl MatchDetailView {
             player_detail,
         })
     }
+
+    pub fn win_col(&self) -> String {
+        if self.win {
+            "Win".to_owned()
+        } else {
+            "Lose".to_owned()
+        }
+    }
+
+    pub fn start_time_col(&self) -> String {
+        let date_time = chrono::DateTime::from_timestamp(self.start_time, 0);
+        date_time
+            .map(|dt| chrono::DateTime::<chrono::Local>::from(dt).format("%Y/%m/%d %H:%M:%S").to_string())
+            .unwrap_or(String::from("Unknown"))
+    }
+
+    pub fn duration_col(&self) -> String {
+        format!("{}m{}s", self.duration / 60, self.duration % 60)
+    }
+
+    pub fn game_mode_col(&self) -> String {
+        format!("{:?}", self.game_mode)
+    }
+
+    pub fn player_detail_col(&self) -> String {
+        format!("{:#?}", self.player_detail)
+    }
 }
 
 #[derive(Deserialize, Debug)]
 struct PlayerDetail {
     account_id: i64,
+    player_slot: i32,
     hero_id: i32,
     hero_variant: i32,
     item_0: i32,

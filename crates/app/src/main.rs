@@ -5,6 +5,7 @@ use tracing_subscriber::{
     Layer,
 };
 
+mod message;
 mod state;
 mod ui;
 

@@ -5,10 +5,10 @@ use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
 use tracing::{error, info};
 
-#[derive(Deserialize, Serialize, Default)]
+#[derive(Deserialize, Serialize, Default, Debug)]
 pub struct AppState {
-    steam_api_key: String,
-    account_id: String,
+    pub steam_api_key: String,
+    pub account_id: i64,
 }
 
 impl AppState {
@@ -28,18 +28,17 @@ impl AppState {
     }
 
     fn save(&self) -> Result<(), common::Error> {
-        // overwrite `config/dev.toml` with current state
-        let toml_string = toml::to_string(&self).whatever_context("")?;
-        println!("{}", toml_string);
-        let mut file = std::fs::File::create("config/save.toml").whatever_context("")?;
-        file.write_all(toml_string.as_bytes()).whatever_context("")?;
+        let toml_string = toml::to_string(&self).whatever_context("Can't transform AppState to toml string")?;
+        let mut file = std::fs::File::create("config/save.toml").whatever_context("Create file: config/save.toml failed")?;
+        file.write_all(toml_string.as_bytes())
+            .whatever_context("Write AppState to config/save.toml failed")?;
         Ok(())
     }
 }
 
 impl Drop for AppState {
     fn drop(&mut self) {
-        tracing::info!("drop AppState");
+        info!("drop AppState");
         if let Err(e) = self.save() {
             error!("save config error: {}", e);
         }
