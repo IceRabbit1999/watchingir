@@ -1,4 +1,6 @@
-use common::data::matches::MatchDetailView;
+use std::collections::VecDeque;
+
+use common::data::matches::{MatchDetailView, PlayerDetail};
 use eframe::egui;
 use egui::{Id, Modal};
 use egui_extras::{Column, TableBuilder};
@@ -6,6 +8,8 @@ use tracing::{error, info};
 
 use super::Component;
 use crate::{message::Task, state::AppState};
+
+const MAX_MATCHES: usize = 10;
 
 pub struct LeftPanel {
     /// LeftTopPanel
@@ -28,7 +32,7 @@ impl Component for LeftPanel {
         ctx: &egui::Context,
         state: &mut AppState,
     ) {
-        egui::SidePanel::left("current_config").show(ctx, |ui| {
+        egui::SidePanel::left("current_config").default_width(250.0).show(ctx, |ui| {
             ui.heading("Watchingir");
             ui.separator();
             ui.strong("Current Steam API Key:");
@@ -64,7 +68,8 @@ impl Component for LeftPanel {
 }
 
 pub struct MainPanel {
-    matches: Vec<MatchDetailView>,
+    matches: VecDeque<MatchDetailView>,
+    selected_index: Option<usize>,
     task_tx: std::sync::mpsc::Sender<Task>,
 }
 
@@ -87,14 +92,15 @@ impl Component for MainPanel {
 impl MainPanel {
     pub fn new(task_tx: std::sync::mpsc::Sender<Task>) -> Self {
         Self {
-            matches: Vec::new(),
+            matches: VecDeque::with_capacity(MAX_MATCHES),
+            selected_index: None,
             task_tx,
         }
     }
 
     pub fn update_match_detail(
         &mut self,
-        matches: Vec<MatchDetailView>,
+        matches: VecDeque<MatchDetailView>,
     ) {
         self.matches = matches;
     }
@@ -125,9 +131,15 @@ impl MainPanel {
                                     self.rows(ui);
                                 }
                             });
+
+                            ui.add_space(30.0);
+
+                            if self.selected_index.is_some() {
+                                self.player_detail(ui);
+                            }
                         })
-                    })
-            })
+                    });
+            });
         });
     }
 
@@ -146,7 +158,7 @@ impl MainPanel {
             .column(Column::auto())
             .column(Column::auto())
             .column(Column::auto())
-            .column(Column::auto())
+            .column(Column::remainder())
             .max_scroll_height(available_height);
 
         table
@@ -187,10 +199,66 @@ impl MainPanel {
                     });
 
                     row.col(|ui| {
-                        ui.label(self.matches[row_index].player_detail_col());
+                        if ui.button("Click to see player detail").clicked() {
+                            self.selected_index = Some(row_index);
+                        }
                     });
                 });
             });
+    }
+
+    fn player_detail(
+        &mut self,
+        ui: &mut egui::Ui,
+    ) {
+        ui.heading("Player Detail");
+        ui.separator();
+
+        if let Some(index) = &self.selected_index {
+            let player = self.matches[*index].player_detail();
+            ui.group(|ui| {
+                ui.heading("Hero");
+                ui.horizontal(|ui| {
+                    ui.label(format!("Hero ID: {}", player.hero_id));
+                    ui.label(format!("Hero Variant: {}", player.hero_variant));
+                    ui.label(format!("Level: {}", player.level));
+                    ui.label(format!("Last Hits: {}", player.last_hits));
+                    ui.label(format!("Denies: {}", player.denies));
+                });
+            });
+
+            ui.add_space(10.0);
+
+            ui.group(|ui| {
+                ui.heading("Items");
+                ui.horizontal_wrapped(|ui| {
+                    let items = [
+                        player.item_0,
+                        player.item_1,
+                        player.item_2,
+                        player.item_3,
+                        player.item_4,
+                        player.item_5,
+                        player.backpack_0,
+                        player.backpack_1,
+                        player.backpack_2,
+                        player.item_neutral,
+                        player.aghanims_scepter,
+                        player.aghanims_shard,
+                        player.moonshard,
+                    ];
+                    for (i, item) in items.iter().enumerate() {
+                        ui.label(format!("Item {}: {}", i, item));
+                    }
+                });
+            });
+
+            ui.add_space(10.0);
+
+            ui.group(|ui| {
+                ui.heading("Performance");
+            });
+        }
     }
 }
 
@@ -202,7 +270,7 @@ pub struct Menu {
 impl Menu {
     fn init() -> Self {
         Self {
-            latest_matches: false,
+            latest_matches: true,
             friends: false,
         }
     }
@@ -211,7 +279,7 @@ impl Menu {
         &mut self,
         ui: &mut egui::Ui,
     ) {
-        egui::SidePanel::left("menu").show_inside(ui, |ui| {
+        egui::SidePanel::left("menu").default_width(250.0).show_inside(ui, |ui| {
             ui.heading("Menu");
             ui.separator();
 

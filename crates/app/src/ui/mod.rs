@@ -48,7 +48,7 @@ impl Default for App {
             task_rx: rx,
             left_panel: LeftPanel::new(tx.clone()),
             main_panel: Arc::new(Mutex::new(MainPanel::new(tx))),
-            courier: Arc::new(Courier::new()),
+            courier: Arc::new(Courier::default()),
         }
     }
 }

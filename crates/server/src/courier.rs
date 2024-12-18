@@ -1,9 +1,11 @@
 use common::{
-    data::matches::{MatchDetailResponse, MatchHistoryResponse},
+    data::{
+        hero::GetHeroesResponse,
+        matches::{MatchDetailResponse, MatchHistoryResponse},
+    },
     error::{DataFormatSnafu, NoneValueSnafu, SteamApiSnafu},
 };
 use snafu::{OptionExt, ResultExt};
-use tracing::info;
 
 const IDOTA2MATCH: &str = "https://api.steampowered.com/IDOTA2Match_570";
 
@@ -11,13 +13,15 @@ pub struct Courier {
     client: reqwest::Client,
 }
 
-impl Courier {
-    pub fn new() -> Self {
+impl Default for Courier {
+    fn default() -> Self {
         Self {
             client: reqwest::Client::new(),
         }
     }
+}
 
+impl Courier {
     // matches
     pub async fn latest_match_detail(
         &self,
@@ -74,6 +78,30 @@ impl Courier {
             .context(DataFormatSnafu { data: "MatchDetailResponse" })?;
 
         Ok(response)
+    }
+
+    // heroes
+    pub async fn heroes(
+        &self,
+        key: &str,
+    ) -> Result<GetHeroesResponse, common::Error> {
+        let url = format!("{}/GetHeroes/v1?key={}&language=zh", IDOTA2MATCH, key);
+        let response = self.client.get(&url).send().await.context(SteamApiSnafu { entrypoint: "GetHeroes" })?;
+        let response = response
+            .json::<GetHeroesResponse>()
+            .await
+            .context(DataFormatSnafu { data: "GetHeroes" })?;
+        Ok(response)
+    }
+
+    // items
+
+    /// GetGameItems is now 404, fetch from https://github.com/odota/dotaconstants/blob/master/build/item_ids.json instead
+    pub async fn items(
+        &self,
+        key: &str,
+    ) -> Result<(), common::Error> {
+        todo!()
     }
 }
 
