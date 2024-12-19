@@ -727,6 +727,7 @@ dependencies = [
  "ir_aquila",
  "reqwest",
  "serde",
+ "serde_json",
  "snafu",
  "tracing",
 ]

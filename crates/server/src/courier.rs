@@ -1,5 +1,6 @@
 use common::{
     data::{
+        constant::{ConstantRequest, ConstantResponse},
         hero::GetHeroesResponse,
         matches::{MatchDetailResponse, MatchHistoryResponse},
     },
@@ -80,28 +81,31 @@ impl Courier {
         Ok(response)
     }
 
-    // heroes
-    pub async fn heroes(
+    // cache
+
+    pub async fn cache(
         &self,
         key: &str,
-    ) -> Result<GetHeroesResponse, common::Error> {
-        let url = format!("{}/GetHeroes/v1?key={}&language=zh", IDOTA2MATCH, key);
-        let response = self.client.get(&url).send().await.context(SteamApiSnafu { entrypoint: "GetHeroes" })?;
-        let response = response
-            .json::<GetHeroesResponse>()
+    ) -> Result<ConstantResponse, common::Error> {
+        let url = "https://api.stratz.com/graphql";
+        let request = ConstantRequest::default();
+
+        let response = self
+            .client
+            .post(url)
+            .header("User-Agent", "STRATZ_API")
+            .header("Authorization", format!("Bearer {}", key))
+            .json(&request)
+            .send()
             .await
-            .context(DataFormatSnafu { data: "GetHeroes" })?;
+            .context(SteamApiSnafu { entrypoint: "cache" })?;
+        println!("{:#?}", response);
+        let response = response
+            .json::<ConstantResponse>()
+            .await
+            .context(DataFormatSnafu { data: "ConstantResponse" })?;
+
         Ok(response)
-    }
-
-    // items
-
-    /// GetGameItems is now 404, fetch from https://github.com/odota/dotaconstants/blob/master/build/item_ids.json instead
-    pub async fn items(
-        &self,
-        key: &str,
-    ) -> Result<(), common::Error> {
-        todo!()
     }
 }
 
@@ -111,7 +115,7 @@ mod tests {
     async fn latest_detail() {
         dotenvy::dotenv().ok();
         let account_id: i64 = std::env::var("ACCOUNT_ID").unwrap().parse().unwrap();
-        let key = std::env::var("API_KEY").unwrap();
+        let key = std::env::var("STEAM_KEY").unwrap();
 
         println!("account_id: {}", account_id);
         println!("key: {}", key);
@@ -119,6 +123,17 @@ mod tests {
         let client = reqwest::Client::new();
         let courier = super::Courier { client };
         let response = courier.latest_match_detail(&key, account_id).await.unwrap();
+        println!("{:#?}", response);
+    }
+
+    #[tokio::test]
+    async fn cache() {
+        dotenvy::dotenv().ok();
+        let key = std::env::var("STRATZ_KEY").unwrap();
+
+        let client = reqwest::Client::new();
+        let courier = super::Courier { client };
+        let response = courier.cache(&key).await.unwrap();
         println!("{:#?}", response);
     }
 }
