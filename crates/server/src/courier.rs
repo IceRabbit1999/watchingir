@@ -1,7 +1,6 @@
 use common::{
     data::{
         constant::{ConstantRequest, ConstantResponse},
-        hero::GetHeroesResponse,
         matches::{MatchDetailResponse, MatchHistoryResponse},
     },
     error::{DataFormatSnafu, NoneValueSnafu, SteamApiSnafu},
@@ -9,6 +8,7 @@ use common::{
 use snafu::{OptionExt, ResultExt};
 
 const IDOTA2MATCH: &str = "https://api.steampowered.com/IDOTA2Match_570";
+const STRATZ_API: &str = "https://api.stratz.com/graphql";
 
 pub struct Courier {
     client: reqwest::Client,
@@ -87,19 +87,18 @@ impl Courier {
         &self,
         key: &str,
     ) -> Result<ConstantResponse, common::Error> {
-        let url = "https://api.stratz.com/graphql";
         let request = ConstantRequest::default();
 
         let response = self
             .client
-            .post(url)
+            .post(STRATZ_API)
             .header("User-Agent", "STRATZ_API")
             .header("Authorization", format!("Bearer {}", key))
             .json(&request)
             .send()
             .await
             .context(SteamApiSnafu { entrypoint: "cache" })?;
-        println!("{:#?}", response);
+
         let response = response
             .json::<ConstantResponse>()
             .await

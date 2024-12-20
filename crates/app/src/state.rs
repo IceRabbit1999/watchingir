@@ -8,6 +8,7 @@ use tracing::{error, info};
 #[derive(Deserialize, Serialize, Default, Debug)]
 pub struct AppState {
     pub steam_api_key: String,
+    pub stratz_api_key: String,
     pub account_id: i64,
 }
 
@@ -16,7 +17,6 @@ impl AppState {
         let state = Config::builder()
             .add_source(config::File::with_name("config/save.toml").required(true))
             .build();
-
         if state.is_err() {
             return None;
         }
@@ -44,5 +44,16 @@ impl Drop for AppState {
         if let Err(e) = self.save() {
             error!("save config error: {}", e);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_save() {
+        let state = AppState::try_from_config();
+        println!("{:?}", state);
     }
 }

@@ -37,6 +37,8 @@ impl Component for LeftPanel {
             ui.separator();
             ui.strong("Current Steam API Key:");
             ui.text_edit_singleline(&mut state.steam_api_key);
+            ui.strong("Current STATAZ API Key:");
+            ui.text_edit_singleline(&mut state.stratz_api_key);
             ui.strong("Current Account ID:");
             let mut account_id_str = state.account_id.to_string();
             if ui.text_edit_singleline(&mut account_id_str).changed() {
@@ -45,20 +47,22 @@ impl Component for LeftPanel {
             ui.add_space(30.0);
             self.menu.show_menu(ui);
         });
-        if state.steam_api_key.is_empty() {
+        if state.steam_api_key.is_empty() || state.stratz_api_key.is_empty() {
             Modal::new(Id::new("steam_api_key_modal")).show(ctx, |ui| {
                 ui.set_width(300.0);
                 ui.heading("Enter Your Steam API Key");
-
                 ui.text_edit_singleline(&mut state.steam_api_key);
 
+                ui.heading("Enter Your Stratz API Key");
+                ui.text_edit_singleline(&mut state.stratz_api_key);
                 ui.separator();
                 egui::Sides::new().show(
                     ui,
                     |_ui| {},
                     |ui| {
-                        if ui.button("Submit").clicked() {
+                        if ui.button("Confirm").clicked() {
                             info!("Initialize steam API key to: {}", state.steam_api_key);
+                            info!("Initialize stratz API key to: {}", state.stratz_api_key);
                         }
                     },
                 )

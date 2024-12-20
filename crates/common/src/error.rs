@@ -27,6 +27,14 @@ pub enum Error {
         #[snafu(implicit)]
         location: Location,
     },
+    /// We don't care whether it is a serde error, or a toml error, or an io error actually
+    #[snafu(display("SaveState: Error when saving state"))]
+    SaveState {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: Box<dyn std::error::Error + Send + Sync>,
+    },
     #[snafu(display("{message}"))]
     #[snafu(whatever)]
     Anyhow {

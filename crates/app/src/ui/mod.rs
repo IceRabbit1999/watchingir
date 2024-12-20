@@ -1,11 +1,12 @@
 mod panel;
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
-use eframe::egui;
+use eframe::{egui, Result};
 use egui::mutex::Mutex;
 use panel::MainPanel;
-use server::courier::Courier;
+use server::courier::{self, Courier};
+use snafu::ResultExt;
 use tokio::runtime::Runtime;
 use tracing::{error, info};
 
@@ -34,12 +35,14 @@ struct App {
     left_panel: LeftPanel,
     main_panel: Arc<Mutex<MainPanel>>,
     courier: Arc<Courier>,
+    constant: GameConstant,
 }
 
 impl Default for App {
     fn default() -> Self {
         let state = AppState::try_from_config().unwrap_or_default();
         info!("Loading AppState: {:?}", state);
+        let courier = Courier::default();
         let (tx, rx) = std::sync::mpsc::channel();
 
         Self {
@@ -48,7 +51,8 @@ impl Default for App {
             task_rx: rx,
             left_panel: LeftPanel::new(tx.clone()),
             main_panel: Arc::new(Mutex::new(MainPanel::new(tx))),
-            courier: Arc::new(Courier::default()),
+            courier: Arc::new(courier),
+            constant: GameConstant::default(),
         }
     }
 }
@@ -59,6 +63,8 @@ impl eframe::App for App {
         ctx: &egui::Context,
         _frame: &mut eframe::Frame,
     ) {
+        if !self.constant_ready() {}
+
         while let Ok(task) = self.task_rx.try_recv() {
             match task {
                 Task::UpdateMatchDetail => {
@@ -73,6 +79,10 @@ impl eframe::App for App {
 }
 
 impl App {
+    fn constant_ready(&self) -> bool {
+        self.constant.is_loaded
+    }
+
     #[tracing::instrument(skip(self))]
     fn latest_match_detail(&mut self) {
         let courier = Arc::clone(&self.courier);
@@ -92,5 +102,47 @@ impl App {
                 }
             }
         });
+    }
+
+    fn fetch_constant(&mut self) -> Result<(), common::Error> {
+        let courier = Arc::clone(&self.courier);
+        let key = self.state.stratz_api_key.clone();
+        self.rt.spawn(async move {
+            let res = courier.cache(&key).await;
+        });
+
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+struct GameConstant {
+    items_map: HashMap<i32, String>,
+    heroes_map: HashMap<i32, String>,
+    is_loaded: bool,
+}
+
+impl GameConstant {
+    pub fn from_config() -> Result<Self, common::Error> {
+        let (items_map, heroes_map) = Self::read_json()?;
+
+        Ok(Self {
+            items_map,
+            heroes_map,
+            is_loaded: true,
+        })
+    }
+
+    fn read_json() -> Result<(HashMap<i32, String>, HashMap<i32, String>), common::Error> {
+        let items_json = std::fs::read_to_string("config/items.json").whatever_context("Read items.json failed")?;
+        let heroes_json = std::fs::read_to_string("config/heroes.json").whatever_context("Read heroes.json failed")?;
+
+        let items: Vec<(i32, String)> = serde_json::from_str(&items_json).whatever_context("Parse items.json failed")?;
+        let heroes: Vec<(i32, String)> = serde_json::from_str(&heroes_json).whatever_context("Parse heroes.json failed")?;
+
+        let items_map = items.into_iter().collect();
+        let heroes_map = heroes.into_iter().collect();
+
+        Ok((items_map, heroes_map))
     }
 }
