@@ -1,11 +1,10 @@
-use common::{
-    data::{
-        constant::{ConstantRequest, ConstantResponse},
-        matches::{MatchDetailResponse, MatchHistoryResponse},
-    },
-    error::{DataFormatSnafu, NoneValueSnafu, SteamApiSnafu},
+use common::data::{
+    constant::{ConstantRequest, ConstantResponse},
+    matches::{MatchDetailResponse, MatchHistoryResponse},
 };
 use snafu::{OptionExt, ResultExt};
+
+use crate::error::{DataFormatSnafu, NoneValueSnafu, SteamApiSnafu};
 
 const IDOTA2MATCH: &str = "https://api.steampowered.com/IDOTA2Match_570";
 const STRATZ_API: &str = "https://api.stratz.com/graphql";
@@ -28,7 +27,7 @@ impl Courier {
         &self,
         key: &str,
         account_id: i64,
-    ) -> Result<MatchDetailResponse, common::Error> {
+    ) -> Result<MatchDetailResponse, crate::Error> {
         let match_history_response = self.get_match_history(key, account_id, 1).await?;
         let seq_num = match_history_response.match_seq_num();
         let seq_num = seq_num.first().context(NoneValueSnafu { expected: "match_seq_num" })?;
@@ -42,7 +41,7 @@ impl Courier {
         key: &str,
         account_id: i64,
         matches_requested: i32,
-    ) -> Result<MatchHistoryResponse, common::Error> {
+    ) -> Result<MatchHistoryResponse, crate::Error> {
         let url = format!(
             "{}/GetMatchHistory/v1?key={}&account_id={}&matches_requested={}",
             IDOTA2MATCH, key, account_id, matches_requested
@@ -63,8 +62,7 @@ impl Courier {
         key: &str,
         sequence: i64,
         matches_requested: i32,
-    ) -> Result<MatchDetailResponse, common::Error> {
-        // GetMatchDetails is broken
+    ) -> Result<MatchDetailResponse, crate::Error> {
         let url = format!(
             "{}/GetMatchHistoryBySequenceNum/v1?key={}&start_at_match_seq_num={}&matches_requested={}",
             IDOTA2MATCH, key, sequence, matches_requested
@@ -83,10 +81,10 @@ impl Courier {
 
     // cache
 
-    pub async fn cache(
+    pub async fn constant(
         &self,
         key: &str,
-    ) -> Result<ConstantResponse, common::Error> {
+    ) -> Result<ConstantResponse, crate::Error> {
         let request = ConstantRequest::default();
 
         let response = self
@@ -132,7 +130,7 @@ mod tests {
 
         let client = reqwest::Client::new();
         let courier = super::Courier { client };
-        let response = courier.cache(&key).await.unwrap();
+        let response = courier.constant(&key).await.unwrap();
         println!("{:#?}", response);
     }
 }

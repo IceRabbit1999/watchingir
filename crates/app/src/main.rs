@@ -5,9 +5,12 @@ use tracing_subscriber::{
     Layer,
 };
 
+mod error;
 mod message;
 mod state;
 mod ui;
+
+pub(crate) use error::Error;
 
 fn main() {
     init_log();

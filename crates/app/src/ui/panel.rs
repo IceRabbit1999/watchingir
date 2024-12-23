@@ -1,13 +1,19 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, sync::Arc};
 
-use common::data::matches::{MatchDetailView, PlayerDetail};
+use common::data::{
+    constant,
+    matches::{MatchDetailView, PlayerDetail},
+};
 use eframe::egui;
-use egui::{Id, Modal};
+use egui::{mutex::Mutex, Id, Modal};
 use egui_extras::{Column, TableBuilder};
 use tracing::{error, info};
 
-use super::Component;
-use crate::{message::Task, state::AppState};
+use super::{mapper::id2name, Component, GameConstant};
+use crate::{
+    message::Task,
+    state::{self, AppState},
+};
 
 const MAX_MATCHES: usize = 10;
 
@@ -31,14 +37,15 @@ impl Component for LeftPanel {
         &mut self,
         ctx: &egui::Context,
         state: &mut AppState,
+        constant: &Arc<Mutex<GameConstant>>,
     ) {
-        egui::SidePanel::left("current_config").default_width(250.0).show(ctx, |ui| {
+        egui::SidePanel::left("current_config").show(ctx, |ui| {
             ui.heading("Watchingir");
             ui.separator();
             ui.strong("Current Steam API Key:");
             ui.text_edit_singleline(&mut state.steam_api_key);
             ui.strong("Current STATAZ API Key:");
-            ui.text_edit_singleline(&mut state.stratz_api_key);
+            ui.text_edit_multiline(&mut state.stratz_api_key);
             ui.strong("Current Account ID:");
             let mut account_id_str = state.account_id.to_string();
             if ui.text_edit_singleline(&mut account_id_str).changed() {
@@ -77,19 +84,14 @@ pub struct MainPanel {
     task_tx: std::sync::mpsc::Sender<Task>,
 }
 
-impl Clone for MainPanel {
-    fn clone(&self) -> Self {
-        todo!()
-    }
-}
-
 impl Component for MainPanel {
     fn ui(
         &mut self,
         ctx: &egui::Context,
         _state: &mut AppState,
+        constant: &Arc<Mutex<GameConstant>>,
     ) {
-        self.table_ui(ctx);
+        self.table_ui(ctx, constant);
     }
 }
 
@@ -118,6 +120,7 @@ impl MainPanel {
     fn table_ui(
         &mut self,
         ctx: &egui::Context,
+        constant: &Arc<Mutex<GameConstant>>,
     ) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical(|ui| {
@@ -127,7 +130,7 @@ impl MainPanel {
                 }
                 ui.separator();
                 egui_extras::StripBuilder::new(ui)
-                    .size(egui_extras::Size::remainder().at_least(100.0))
+                    .size(egui_extras::Size::remainder().at_least(00.0))
                     .vertical(|mut strip| {
                         strip.cell(|ui| {
                             egui::ScrollArea::horizontal().show(ui, |ui| {
@@ -139,7 +142,7 @@ impl MainPanel {
                             ui.add_space(30.0);
 
                             if self.selected_index.is_some() {
-                                self.player_detail(ui);
+                                self.player_detail(ui, constant);
                             }
                         })
                     });
@@ -214,16 +217,19 @@ impl MainPanel {
     fn player_detail(
         &mut self,
         ui: &mut egui::Ui,
+        constant: &Arc<Mutex<GameConstant>>,
     ) {
         ui.heading("Player Detail");
         ui.separator();
 
+        let guard = constant.lock();
         if let Some(index) = &self.selected_index {
             let player = self.matches[*index].player_detail();
             ui.group(|ui| {
+                let hero_name = id2name(player.hero_id, &guard.heroes_map);
                 ui.heading("Hero");
                 ui.horizontal(|ui| {
-                    ui.label(format!("Hero ID: {}", player.hero_id));
+                    ui.label(format!("Hero: {}", hero_name));
                     ui.label(format!("Hero Variant: {}", player.hero_variant));
                     ui.label(format!("Level: {}", player.level));
                     ui.label(format!("Last Hits: {}", player.last_hits));
@@ -283,7 +289,7 @@ impl Menu {
         &mut self,
         ui: &mut egui::Ui,
     ) {
-        egui::SidePanel::left("menu").default_width(250.0).show_inside(ui, |ui| {
+        egui::SidePanel::left("menu").default_width(ui.available_width()).show_inside(ui, |ui| {
             ui.heading("Menu");
             ui.separator();
 

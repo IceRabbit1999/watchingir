@@ -1,9 +1,7 @@
-use std::io::Write;
+use std::{collections::HashMap, io::Write};
 
 use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
-
-use crate::error::SaveStateSnafu;
 
 #[derive(Serialize)]
 pub struct ConstantRequest {
@@ -44,42 +42,24 @@ pub struct ConstantResponse {
 }
 
 impl ConstantResponse {
-    pub fn save_to_file(&self) -> Result<(), crate::Error> {
+    pub fn spilt(self) -> (HashMap<i32, String>, HashMap<i32, String>) {
         let items = self
             .data
             .constants
             .items
             .iter()
-            .map(|item| {
-                serde_json::json!({
-                    "id": item.id,
-                    "name": item.language.displayName.clone().unwrap_or(String::from("Unknown"))
-                })
-            })
-            .collect::<Vec<_>>();
+            .map(|item| (item.id, item.language.displayName.clone().unwrap_or(String::from("Unknown"))))
+            .collect::<HashMap<i32, String>>();
 
         let heroes = self
             .data
             .constants
             .heroes
             .iter()
-            .map(|hero| {
-                serde_json::json!({
-                    "id": hero.id,
-                    "name": hero.language.displayName.clone().unwrap_or(String::from("Unknown"))
-                })
-            })
-            .collect::<Vec<_>>();
+            .map(|hero| (hero.id, hero.language.displayName.clone().unwrap_or(String::from("Unknown"))))
+            .collect::<HashMap<i32, String>>();
 
-        let items_josn = serde_json::to_string_pretty(&items).boxed().context(SaveStateSnafu)?;
-        let heroes_json = serde_json::to_string_pretty(&heroes).boxed().context(SaveStateSnafu)?;
-
-        let mut items_file = std::fs::File::create("config/items.json").boxed().context(SaveStateSnafu)?;
-        let mut heroes_file = std::fs::File::create("config/heroes.json").boxed().context(SaveStateSnafu)?;
-
-        items_file.write_all(items_josn.as_bytes()).boxed().context(SaveStateSnafu)?;
-        heroes_file.write_all(heroes_json.as_bytes()).boxed().context(SaveStateSnafu)?;
-        Ok(())
+        (items, heroes)
     }
 }
 

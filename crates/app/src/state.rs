@@ -1,9 +1,9 @@
-use std::io::Write;
-
 use config::Config;
 use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
 use tracing::{error, info};
+
+use crate::error::{TomlSnafu, WriteFileSnafu};
 
 #[derive(Deserialize, Serialize, Default, Debug)]
 pub struct AppState {
@@ -28,12 +28,12 @@ impl AppState {
         }
     }
 
-    fn save(&self) -> Result<(), common::Error> {
-        let toml_string = toml::to_string(&self).whatever_context("Can't transform AppState to toml string")?;
+    fn save(&self) -> Result<(), crate::Error> {
+        let toml_string = toml::to_string(&self).context(TomlSnafu)?;
         info!("Current AppState: \n{}", toml_string);
-        let mut file = std::fs::File::create("config/save.toml").whatever_context("Create file: config/save.toml failed")?;
-        file.write_all(toml_string.as_bytes())
-            .whatever_context("Write AppState to config/save.toml failed")?;
+        std::fs::write("config/save.toml", toml_string).context(WriteFileSnafu {
+            filename: "config/save.toml",
+        })?;
         Ok(())
     }
 }
