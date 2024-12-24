@@ -1,7 +1,6 @@
-use std::{collections::HashMap, io::Write};
+use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use snafu::ResultExt;
 
 #[derive(Serialize)]
 pub struct ConstantRequest {
@@ -48,7 +47,7 @@ impl ConstantResponse {
             .constants
             .items
             .iter()
-            .map(|item| (item.id, item.language.displayName.clone().unwrap_or(String::from("Unknown"))))
+            .map(|item| (item.id, item.language.display_name.clone().unwrap_or(String::from("Unknown"))))
             .collect::<HashMap<i32, String>>();
 
         let heroes = self
@@ -56,7 +55,7 @@ impl ConstantResponse {
             .constants
             .heroes
             .iter()
-            .map(|hero| (hero.id, hero.language.displayName.clone().unwrap_or(String::from("Unknown"))))
+            .map(|hero| (hero.id, hero.language.display_name.clone().unwrap_or(String::from("Unknown"))))
             .collect::<HashMap<i32, String>>();
 
         (items, heroes)
@@ -88,7 +87,7 @@ struct Hero {
 
 #[derive(Deserialize, Debug)]
 struct Language {
-    displayName: Option<String>,
+    display_name: Option<String>,
 }
 
 #[cfg(test)]

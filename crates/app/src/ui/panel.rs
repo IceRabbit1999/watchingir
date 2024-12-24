@@ -1,19 +1,13 @@
 use std::{collections::VecDeque, sync::Arc};
 
-use common::data::{
-    constant,
-    matches::{MatchDetailView, PlayerDetail},
-};
+use common::data::matches::MatchDetailView;
 use eframe::egui;
-use egui::{mutex::Mutex, Id, Modal};
+use egui::{mutex::RwLock, Id, Modal};
 use egui_extras::{Column, TableBuilder};
 use tracing::{error, info};
 
 use super::{mapper::id2name, Component, GameConstant};
-use crate::{
-    message::Task,
-    state::{self, AppState},
-};
+use crate::{message::Task, state::AppState};
 
 const MAX_MATCHES: usize = 10;
 
@@ -37,7 +31,7 @@ impl Component for LeftPanel {
         &mut self,
         ctx: &egui::Context,
         state: &mut AppState,
-        constant: &Arc<Mutex<GameConstant>>,
+        _constant: &Arc<RwLock<GameConstant>>,
     ) {
         egui::SidePanel::left("current_config").show(ctx, |ui| {
             ui.heading("Watchingir");
@@ -46,7 +40,7 @@ impl Component for LeftPanel {
             ui.text_edit_singleline(&mut state.steam_api_key);
             ui.strong("Current STATAZ API Key:");
             ui.text_edit_multiline(&mut state.stratz_api_key);
-            ui.strong("Current Account ID:");
+            ui.strong("当前 steam id:");
             let mut account_id_str = state.account_id.to_string();
             if ui.text_edit_singleline(&mut account_id_str).changed() {
                 state.account_id = account_id_str.parse().expect("Invalid account id");
@@ -89,7 +83,7 @@ impl Component for MainPanel {
         &mut self,
         ctx: &egui::Context,
         _state: &mut AppState,
-        constant: &Arc<Mutex<GameConstant>>,
+        constant: &Arc<RwLock<GameConstant>>,
     ) {
         self.table_ui(ctx, constant);
     }
@@ -120,7 +114,7 @@ impl MainPanel {
     fn table_ui(
         &mut self,
         ctx: &egui::Context,
-        constant: &Arc<Mutex<GameConstant>>,
+        constant: &Arc<RwLock<GameConstant>>,
     ) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical(|ui| {
@@ -217,49 +211,61 @@ impl MainPanel {
     fn player_detail(
         &mut self,
         ui: &mut egui::Ui,
-        constant: &Arc<Mutex<GameConstant>>,
+        constant: &Arc<RwLock<GameConstant>>,
     ) {
         ui.heading("Player Detail");
         ui.separator();
 
-        let guard = constant.lock();
+        let guard = constant.read();
         if let Some(index) = &self.selected_index {
             let player = self.matches[*index].player_detail();
             ui.group(|ui| {
                 let hero_name = id2name(player.hero_id, &guard.heroes_map);
                 ui.heading("Hero");
                 ui.horizontal(|ui| {
-                    ui.label(format!("Hero: {}", hero_name));
-                    ui.label(format!("Hero Variant: {}", player.hero_variant));
-                    ui.label(format!("Level: {}", player.level));
-                    ui.label(format!("Last Hits: {}", player.last_hits));
-                    ui.label(format!("Denies: {}", player.denies));
+                    ui.label(format!("英雄: {}", hero_name));
+                    ui.label(format!("命石: {}", player.hero_variant));
+                    ui.label(format!("等级: {}", player.level));
+                    ui.label(format!("正补: {}", player.last_hits));
+                    ui.label(format!("反补: {}", player.denies));
                 });
             });
 
             ui.add_space(10.0);
 
             ui.group(|ui| {
-                ui.heading("Items");
+                ui.heading("装备");
                 ui.horizontal_wrapped(|ui| {
-                    let items = [
-                        player.item_0,
-                        player.item_1,
-                        player.item_2,
-                        player.item_3,
-                        player.item_4,
-                        player.item_5,
-                        player.backpack_0,
-                        player.backpack_1,
-                        player.backpack_2,
-                        player.item_neutral,
-                        player.aghanims_scepter,
-                        player.aghanims_shard,
-                        player.moonshard,
-                    ];
-                    for (i, item) in items.iter().enumerate() {
-                        ui.label(format!("Item {}: {}", i, item));
-                    }
+                    let item_0 = id2name(player.item_0, &guard.items_map);
+                    let item_1 = id2name(player.item_1, &guard.items_map);
+                    let item_2 = id2name(player.item_2, &guard.items_map);
+                    let item_3 = id2name(player.item_3, &guard.items_map);
+                    let item_4 = id2name(player.item_4, &guard.items_map);
+                    let item_5 = id2name(player.item_5, &guard.items_map);
+                    let backpack_0 = id2name(player.backpack_0, &guard.items_map);
+                    let backpack_1 = id2name(player.backpack_1, &guard.items_map);
+                    let backpack_2 = id2name(player.backpack_2, &guard.items_map);
+                    let item_neutral = id2name(player.item_neutral, &guard.items_map);
+                    let moonshard = if player.moonshard == 1 { "是" } else { "否" };
+                    let aghanims_scepter = if player.aghanims_scepter == 1 { "是" } else { "否" };
+                    let aghanims_shard = if player.aghanims_shard == 1 { "是" } else { "否" };
+                    ui.label("物品栏");
+                    ui.label(item_0);
+                    ui.label(item_1);
+                    ui.label(item_2);
+                    ui.label(item_3);
+                    ui.label(item_4);
+                    ui.label(item_5);
+                    ui.label("背包");
+                    ui.label(backpack_0);
+                    ui.label(backpack_1);
+                    ui.label(backpack_2);
+                    ui.label("中立物品");
+                    ui.label(item_neutral);
+
+                    ui.label(format!("A杖: {}", aghanims_scepter));
+                    ui.label(format!("魔晶: {}", aghanims_shard));
+                    ui.label(format!("银月: {}", moonshard));
                 });
             });
 

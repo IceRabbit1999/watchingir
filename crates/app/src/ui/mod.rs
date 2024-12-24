@@ -4,7 +4,10 @@ mod panel;
 use std::{collections::HashMap, fmt::Display, sync::Arc};
 
 use eframe::{egui, Result};
-use egui::mutex::Mutex;
+use egui::{
+    mutex::{Mutex, RwLock},
+    FontData, FontDefinitions, FontFamily,
+};
 use panel::MainPanel;
 use server::courier::Courier;
 use snafu::ResultExt;
@@ -23,7 +26,7 @@ pub trait Component {
         &mut self,
         ctx: &egui::Context,
         state: &mut AppState,
-        constant: &Arc<Mutex<GameConstant>>,
+        constant: &Arc<RwLock<GameConstant>>,
     );
 }
 
@@ -32,7 +35,7 @@ pub fn launch() -> eframe::Result {
         viewport: egui::ViewportBuilder::default(),
         ..Default::default()
     };
-    eframe::run_native("Watchingir", options, Box::new(|_cc| Ok(Box::<App>::default())))
+    eframe::run_native("Watchingir", options, Box::new(|cc| Ok(Box::new(App::new(cc)))))
 }
 
 struct App {
@@ -42,11 +45,22 @@ struct App {
     left_panel: LeftPanel,
     main_panel: Arc<Mutex<MainPanel>>,
     courier: Arc<Courier>,
-    constant: Arc<Mutex<GameConstant>>,
+    constant: Arc<RwLock<GameConstant>>,
 }
 
-impl Default for App {
-    fn default() -> Self {
+impl App {
+    fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        // Get font from: https://github.com/lxgw/LxgwWenKai
+        let mut fonts = FontDefinitions::default();
+        fonts.font_data.insert(
+            "kx_font".to_owned(),
+            Arc::new(FontData::from_static(include_bytes!("../../../../assets/LXGWWenKai-Regular.ttf"))),
+        );
+
+        fonts.families.get_mut(&FontFamily::Proportional).unwrap().push("kx_font".to_owned());
+
+        cc.egui_ctx.set_fonts(fonts);
+
         let state = AppState::try_from_config().unwrap_or_default();
         info!("Loading AppState: {:?}", state);
         let courier = Courier::default();
@@ -60,7 +74,7 @@ impl Default for App {
             left_panel: LeftPanel::new(tx.clone()),
             main_panel: Arc::new(Mutex::new(MainPanel::new(tx))),
             courier: Arc::new(courier),
-            constant: Arc::new(Mutex::new(constant)),
+            constant: Arc::new(RwLock::new(constant)),
         }
     }
 }
@@ -102,14 +116,14 @@ impl App {
     // constant
 
     fn constant_ready(&self) -> bool {
-        self.constant.lock().is_loaded
+        self.constant.read().is_loaded
     }
 
     fn set_constant(
         &mut self,
         constant: GameConstant,
     ) {
-        *self.constant.lock() = constant;
+        *self.constant.write() = constant;
     }
 
     #[tracing::instrument(skip(self))]
@@ -142,7 +156,7 @@ impl App {
             match res {
                 Ok(constant) => {
                     let (items, heroes) = constant.spilt();
-                    let mut guard = game_constant.lock();
+                    let mut guard = game_constant.write();
                     guard.items_map = items;
                     guard.heroes_map = heroes;
                     guard.is_loaded = true;
