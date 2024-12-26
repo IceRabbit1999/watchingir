@@ -114,6 +114,15 @@ impl MatchDetailView {
         })
     }
 
+    pub fn participation_rate(&self) -> f32 {
+        let total = if self.is_radiant() { self.radiant_score } else { self.dire_score };
+        self.player_detail.kills as f32 / total as f32
+    }
+
+    pub fn is_radiant(&self) -> bool {
+        self.player_detail.player_slot < 128
+    }
+
     pub fn win_col(&self) -> String {
         if self.win {
             "Win".to_owned()
@@ -180,6 +189,12 @@ pub struct PlayerDetail {
     pub hero_healing: i32,
     pub gold: i32,
     pub gold_spent: i32,
+}
+
+impl PlayerDetail {
+    pub fn gold_damage_ratio(&self) -> f32 {
+        (self.gold / self.hero_damage) as f32
+    }
 }
 
 #[derive(Debug)]

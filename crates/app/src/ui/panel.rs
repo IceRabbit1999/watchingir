@@ -272,7 +272,22 @@ impl MainPanel {
             ui.add_space(10.0);
 
             ui.group(|ui| {
-                ui.heading("Performance");
+                ui.heading("数据");
+                ui.horizontal(|ui| {
+                    ui.label(format!("击杀: {}", player.kills));
+                    ui.label(format!("死亡: {}", player.deaths));
+                    ui.label(format!("助攻: {}", player.assists));
+                    ui.label(format!("GPM: {}", player.gold_per_min));
+                    ui.label(format!("XPM: {}", player.xp_per_min));
+                    ui.label(format!("总经济: {}", player.gold));
+                    ui.label(format!("伤害: {}", player.hero_damage));
+                    // 承伤
+                    ui.label(format!("治疗: {}", player.hero_healing));
+                    ui.label(format!("建筑: {}", player.tower_damage));
+
+                    ui.label(format!("经济输出比: {}", (player.gold / player.hero_damage) as f32 / 100.0));
+                    ui.label(format!("参战率: {}", self.matches[*index].participation_rate()));
+                });
             });
         }
     }
