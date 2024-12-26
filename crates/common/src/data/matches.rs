@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use serde::Deserialize;
 use snafu::OptionExt;
 
@@ -51,13 +53,12 @@ impl MatchDetailResponse {
     pub fn views(
         self,
         account_id: i64,
-    ) -> Vec<MatchDetailView> {
+    ) -> VecDeque<MatchDetailView> {
         let matches = self.result.matches;
-        let vec = matches
+        matches
             .into_iter()
             .map(|m| MatchDetailView::from_match_detail(m, account_id).expect("No account_id matched"))
-            .collect();
-        vec
+            .collect::<VecDeque<MatchDetailView>>()
     }
 }
 
@@ -113,6 +114,15 @@ impl MatchDetailView {
         })
     }
 
+    pub fn participation_rate(&self) -> f32 {
+        let total = if self.is_radiant() { self.radiant_score } else { self.dire_score };
+        self.player_detail.kills as f32 / total as f32
+    }
+
+    pub fn is_radiant(&self) -> bool {
+        self.player_detail.player_slot < 128
+    }
+
     pub fn win_col(&self) -> String {
         if self.win {
             "Win".to_owned()
@@ -139,42 +149,52 @@ impl MatchDetailView {
     pub fn player_detail_col(&self) -> String {
         format!("{:#?}", self.player_detail)
     }
+
+    pub fn player_detail(&self) -> PlayerDetail {
+        self.player_detail.clone()
+    }
 }
 
-#[derive(Deserialize, Debug)]
-struct PlayerDetail {
-    account_id: i64,
-    player_slot: i32,
-    hero_id: i32,
-    hero_variant: i32,
-    item_0: i32,
-    item_1: i32,
-    item_2: i32,
-    item_3: i32,
-    item_4: i32,
-    item_5: i32,
-    backpack_0: i32,
-    backpack_1: i32,
-    backpack_2: i32,
-    item_neutral: i32,
-    kills: i32,
-    deaths: i32,
-    assists: i32,
-    leaver_status: LeaverStatus,
-    last_hits: i32,
-    denies: i32,
-    gold_per_min: i32,
-    xp_per_min: i32,
-    level: i32,
-    net_worth: i32,
-    aghanims_scepter: i32,
-    aghanims_shard: i32,
-    moonshard: i32,
-    hero_damage: i32,
-    tower_damage: i32,
-    hero_healing: i32,
-    gold: i32,
-    gold_spent: i32,
+#[derive(Deserialize, Debug, Clone)]
+pub struct PlayerDetail {
+    pub account_id: i64,
+    pub player_slot: i32,
+    pub hero_id: i32,
+    pub hero_variant: i32,
+    pub item_0: i32,
+    pub item_1: i32,
+    pub item_2: i32,
+    pub item_3: i32,
+    pub item_4: i32,
+    pub item_5: i32,
+    pub backpack_0: i32,
+    pub backpack_1: i32,
+    pub backpack_2: i32,
+    pub item_neutral: i32,
+    pub kills: i32,
+    pub deaths: i32,
+    pub assists: i32,
+    pub leaver_status: LeaverStatus,
+    pub last_hits: i32,
+    pub denies: i32,
+    pub gold_per_min: i32,
+    pub xp_per_min: i32,
+    pub level: i32,
+    pub net_worth: i32,
+    pub aghanims_scepter: i32,
+    pub aghanims_shard: i32,
+    pub moonshard: i32,
+    pub hero_damage: i32,
+    pub tower_damage: i32,
+    pub hero_healing: i32,
+    pub gold: i32,
+    pub gold_spent: i32,
+}
+
+impl PlayerDetail {
+    pub fn gold_damage_ratio(&self) -> f32 {
+        (self.gold / self.hero_damage) as f32
+    }
 }
 
 #[derive(Debug)]
@@ -273,7 +293,7 @@ impl<'de> Deserialize<'de> for GameMode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum LeaverStatus {
     None = 0,
     Disconnected = 1,

@@ -1,11 +1,15 @@
+use std::{collections::VecDeque, sync::Arc};
+
 use common::data::matches::MatchDetailView;
 use eframe::egui;
-use egui::{Id, Modal};
+use egui::{mutex::RwLock, Id, Modal};
 use egui_extras::{Column, TableBuilder};
 use tracing::{error, info};
 
-use super::Component;
+use super::{mapper::id2name, Component, GameConstant};
 use crate::{message::Task, state::AppState};
+
+const MAX_MATCHES: usize = 10;
 
 pub struct LeftPanel {
     /// LeftTopPanel
@@ -27,13 +31,16 @@ impl Component for LeftPanel {
         &mut self,
         ctx: &egui::Context,
         state: &mut AppState,
+        _constant: &Arc<RwLock<GameConstant>>,
     ) {
         egui::SidePanel::left("current_config").show(ctx, |ui| {
             ui.heading("Watchingir");
             ui.separator();
             ui.strong("Current Steam API Key:");
             ui.text_edit_singleline(&mut state.steam_api_key);
-            ui.strong("Current Account ID:");
+            ui.strong("Current STATAZ API Key:");
+            ui.text_edit_multiline(&mut state.stratz_api_key);
+            ui.strong("当前 steam id:");
             let mut account_id_str = state.account_id.to_string();
             if ui.text_edit_singleline(&mut account_id_str).changed() {
                 state.account_id = account_id_str.parse().expect("Invalid account id");
@@ -41,20 +48,22 @@ impl Component for LeftPanel {
             ui.add_space(30.0);
             self.menu.show_menu(ui);
         });
-        if state.steam_api_key.is_empty() {
+        if state.steam_api_key.is_empty() || state.stratz_api_key.is_empty() {
             Modal::new(Id::new("steam_api_key_modal")).show(ctx, |ui| {
                 ui.set_width(300.0);
                 ui.heading("Enter Your Steam API Key");
-
                 ui.text_edit_singleline(&mut state.steam_api_key);
 
+                ui.heading("Enter Your Stratz API Key");
+                ui.text_edit_singleline(&mut state.stratz_api_key);
                 ui.separator();
                 egui::Sides::new().show(
                     ui,
                     |_ui| {},
                     |ui| {
-                        if ui.button("Submit").clicked() {
+                        if ui.button("Confirm").clicked() {
                             info!("Initialize steam API key to: {}", state.steam_api_key);
+                            info!("Initialize stratz API key to: {}", state.stratz_api_key);
                         }
                     },
                 )
@@ -64,14 +73,9 @@ impl Component for LeftPanel {
 }
 
 pub struct MainPanel {
-    matches: Vec<MatchDetailView>,
+    matches: VecDeque<MatchDetailView>,
+    selected_index: Option<usize>,
     task_tx: std::sync::mpsc::Sender<Task>,
-}
-
-impl Clone for MainPanel {
-    fn clone(&self) -> Self {
-        todo!()
-    }
 }
 
 impl Component for MainPanel {
@@ -79,22 +83,24 @@ impl Component for MainPanel {
         &mut self,
         ctx: &egui::Context,
         _state: &mut AppState,
+        constant: &Arc<RwLock<GameConstant>>,
     ) {
-        self.table_ui(ctx);
+        self.table_ui(ctx, constant);
     }
 }
 
 impl MainPanel {
     pub fn new(task_tx: std::sync::mpsc::Sender<Task>) -> Self {
         Self {
-            matches: Vec::new(),
+            matches: VecDeque::with_capacity(MAX_MATCHES),
+            selected_index: None,
             task_tx,
         }
     }
 
     pub fn update_match_detail(
         &mut self,
-        matches: Vec<MatchDetailView>,
+        matches: VecDeque<MatchDetailView>,
     ) {
         self.matches = matches;
     }
@@ -108,6 +114,7 @@ impl MainPanel {
     fn table_ui(
         &mut self,
         ctx: &egui::Context,
+        constant: &Arc<RwLock<GameConstant>>,
     ) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical(|ui| {
@@ -117,7 +124,7 @@ impl MainPanel {
                 }
                 ui.separator();
                 egui_extras::StripBuilder::new(ui)
-                    .size(egui_extras::Size::remainder().at_least(100.0))
+                    .size(egui_extras::Size::remainder().at_least(00.0))
                     .vertical(|mut strip| {
                         strip.cell(|ui| {
                             egui::ScrollArea::horizontal().show(ui, |ui| {
@@ -125,9 +132,15 @@ impl MainPanel {
                                     self.rows(ui);
                                 }
                             });
+
+                            ui.add_space(30.0);
+
+                            if self.selected_index.is_some() {
+                                self.player_detail(ui, constant);
+                            }
                         })
-                    })
-            })
+                    });
+            });
         });
     }
 
@@ -146,7 +159,7 @@ impl MainPanel {
             .column(Column::auto())
             .column(Column::auto())
             .column(Column::auto())
-            .column(Column::auto())
+            .column(Column::remainder())
             .max_scroll_height(available_height);
 
         table
@@ -187,10 +200,96 @@ impl MainPanel {
                     });
 
                     row.col(|ui| {
-                        ui.label(self.matches[row_index].player_detail_col());
+                        if ui.button("Click to see player detail").clicked() {
+                            self.selected_index = Some(row_index);
+                        }
                     });
                 });
             });
+    }
+
+    fn player_detail(
+        &mut self,
+        ui: &mut egui::Ui,
+        constant: &Arc<RwLock<GameConstant>>,
+    ) {
+        ui.heading("Player Detail");
+        ui.separator();
+
+        let guard = constant.read();
+        if let Some(index) = &self.selected_index {
+            let player = self.matches[*index].player_detail();
+            ui.group(|ui| {
+                let hero_name = id2name(player.hero_id, &guard.heroes_map);
+                ui.heading("Hero");
+                ui.horizontal(|ui| {
+                    ui.label(format!("英雄: {}", hero_name));
+                    ui.label(format!("命石: {}", player.hero_variant));
+                    ui.label(format!("等级: {}", player.level));
+                    ui.label(format!("正补: {}", player.last_hits));
+                    ui.label(format!("反补: {}", player.denies));
+                });
+            });
+
+            ui.add_space(10.0);
+
+            ui.group(|ui| {
+                ui.heading("装备");
+                ui.horizontal_wrapped(|ui| {
+                    let item_0 = id2name(player.item_0, &guard.items_map);
+                    let item_1 = id2name(player.item_1, &guard.items_map);
+                    let item_2 = id2name(player.item_2, &guard.items_map);
+                    let item_3 = id2name(player.item_3, &guard.items_map);
+                    let item_4 = id2name(player.item_4, &guard.items_map);
+                    let item_5 = id2name(player.item_5, &guard.items_map);
+                    let backpack_0 = id2name(player.backpack_0, &guard.items_map);
+                    let backpack_1 = id2name(player.backpack_1, &guard.items_map);
+                    let backpack_2 = id2name(player.backpack_2, &guard.items_map);
+                    let item_neutral = id2name(player.item_neutral, &guard.items_map);
+                    let moonshard = if player.moonshard == 1 { "是" } else { "否" };
+                    let aghanims_scepter = if player.aghanims_scepter == 1 { "是" } else { "否" };
+                    let aghanims_shard = if player.aghanims_shard == 1 { "是" } else { "否" };
+                    ui.label("物品栏");
+                    ui.label(item_0);
+                    ui.label(item_1);
+                    ui.label(item_2);
+                    ui.label(item_3);
+                    ui.label(item_4);
+                    ui.label(item_5);
+                    ui.label("背包");
+                    ui.label(backpack_0);
+                    ui.label(backpack_1);
+                    ui.label(backpack_2);
+                    ui.label("中立物品");
+                    ui.label(item_neutral);
+
+                    ui.label(format!("A杖: {}", aghanims_scepter));
+                    ui.label(format!("魔晶: {}", aghanims_shard));
+                    ui.label(format!("银月: {}", moonshard));
+                });
+            });
+
+            ui.add_space(10.0);
+
+            ui.group(|ui| {
+                ui.heading("数据");
+                ui.horizontal(|ui| {
+                    ui.label(format!("击杀: {}", player.kills));
+                    ui.label(format!("死亡: {}", player.deaths));
+                    ui.label(format!("助攻: {}", player.assists));
+                    ui.label(format!("GPM: {}", player.gold_per_min));
+                    ui.label(format!("XPM: {}", player.xp_per_min));
+                    ui.label(format!("总经济: {}", player.gold));
+                    ui.label(format!("伤害: {}", player.hero_damage));
+                    // 承伤
+                    ui.label(format!("治疗: {}", player.hero_healing));
+                    ui.label(format!("建筑: {}", player.tower_damage));
+
+                    ui.label(format!("经济输出比: {}", (player.gold / player.hero_damage) as f32 / 100.0));
+                    ui.label(format!("参战率: {}", self.matches[*index].participation_rate()));
+                });
+            });
+        }
     }
 }
 
@@ -202,7 +301,7 @@ pub struct Menu {
 impl Menu {
     fn init() -> Self {
         Self {
-            latest_matches: false,
+            latest_matches: true,
             friends: false,
         }
     }
@@ -211,7 +310,7 @@ impl Menu {
         &mut self,
         ui: &mut egui::Ui,
     ) {
-        egui::SidePanel::left("menu").show_inside(ui, |ui| {
+        egui::SidePanel::left("menu").default_width(ui.available_width()).show_inside(ui, |ui| {
             ui.heading("Menu");
             ui.separator();
 

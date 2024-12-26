@@ -205,7 +205,9 @@ dependencies = [
  "eframe",
  "egui",
  "egui_extras",
+ "ir_aquila",
  "serde",
+ "serde_json",
  "server",
  "snafu",
  "tokio",
@@ -727,6 +729,7 @@ dependencies = [
  "ir_aquila",
  "reqwest",
  "serde",
+ "serde_json",
  "snafu",
  "tracing",
 ]
@@ -3295,6 +3298,7 @@ version = "0.1.0"
 dependencies = [
  "common",
  "dotenvy",
+ "ir_aquila",
  "reqwest",
  "serde",
  "snafu",

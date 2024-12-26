@@ -1,4 +1,4 @@
 //! Reference: https://github.com/SteamDatabase/SteamTracking
 
-pub mod hero;
+pub mod constant;
 pub mod matches;
