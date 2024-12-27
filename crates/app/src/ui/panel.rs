@@ -40,11 +40,11 @@ impl Component for LeftPanel {
             ui.text_edit_singleline(&mut state.steam_api_key);
             ui.strong("Current STATAZ API Key:");
             ui.text_edit_multiline(&mut state.stratz_api_key);
-            ui.strong("当前 steam id:");
-            let mut account_id_str = state.account_id.to_string();
-            if ui.text_edit_singleline(&mut account_id_str).changed() {
-                state.account_id = account_id_str.parse().expect("Invalid account id");
-            }
+            // ui.strong("当前 steam id:");
+            // let mut account_id_str = state.account_id.to_string();
+            // if ui.text_edit_singleline(&mut account_id_str).changed() {
+            //     state.account_id = account_id_str.parse().expect("Invalid account id");
+            // }
             ui.add_space(30.0);
             self.menu.show_menu(ui);
         });

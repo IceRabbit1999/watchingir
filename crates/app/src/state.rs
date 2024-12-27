@@ -9,7 +9,7 @@ use crate::error::{TomlSnafu, WriteFileSnafu};
 pub struct AppState {
     pub steam_api_key: String,
     pub stratz_api_key: String,
-    pub account_id: i64,
+    pub friends: Vec<i64>,
 }
 
 impl AppState {
@@ -29,7 +29,7 @@ impl AppState {
     }
 
     fn save(&self) -> Result<(), crate::Error> {
-        let toml_string = toml::to_string(&self).context(TomlSnafu)?;
+        let toml_string = toml::to_string_pretty(&self).context(TomlSnafu)?;
         info!("Current AppState: \n{}", toml_string);
         std::fs::write("config/save.toml", toml_string).context(WriteFileSnafu {
             filename: "config/save.toml",

@@ -1,7 +1,12 @@
+mod friend;
 mod mapper;
 mod panel;
 
-use std::{collections::HashMap, fmt::Display, sync::Arc};
+use std::{
+    collections::{HashMap, VecDeque},
+    fmt::Display,
+    sync::Arc,
+};
 
 use eframe::{egui, Result};
 use egui::{
@@ -130,13 +135,20 @@ impl App {
     fn latest_match_detail(&mut self) {
         let courier = Arc::clone(&self.courier);
         let steam_api_key = self.state.steam_api_key.clone();
-        let account_id = self.state.account_id;
+        let account_ids = self.state.friends.clone();
         let main_panel = Arc::clone(&self.main_panel);
         self.rt.spawn(async move {
-            let res = courier.latest_match_detail(&steam_api_key, account_id).await.context(ServerSnafu);
+            let res = courier
+                .latest_friends_match_detail(&steam_api_key, &account_ids)
+                .await
+                .context(ServerSnafu);
             match res {
                 Ok(match_detail_response) => {
-                    let view = match_detail_response.views(account_id);
+                    let mut view = VecDeque::new();
+                    match_detail_response
+                        .into_iter()
+                        .for_each(|(detail, account_id)| view.extend(detail.views(account_id)));
+
                     let mut guard = main_panel.lock();
                     guard.update_match_detail(view);
                 }

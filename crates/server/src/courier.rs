@@ -23,6 +23,20 @@ impl Default for Courier {
 
 impl Courier {
     // matches
+
+    pub async fn latest_friends_match_detail(
+        &self,
+        key: &str,
+        friend_ids: &[i64],
+    ) -> Result<Vec<(MatchDetailResponse, i64)>, crate::Error> {
+        let mut responses = Vec::new();
+        for &account_id in friend_ids {
+            let response = self.latest_match_detail(key, account_id).await?;
+            responses.push((response, account_id));
+        }
+        Ok(responses)
+    }
+
     pub async fn latest_match_detail(
         &self,
         key: &str,
