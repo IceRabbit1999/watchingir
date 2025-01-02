@@ -46,35 +46,36 @@ struct Player {
 
 #[derive(Deserialize, Debug)]
 pub struct MatchDetailResponse {
-    result: MatchDetailResult,
+    pub result: MatchDetailResult,
 }
 
 impl MatchDetailResponse {
     pub fn views(
         self,
         account_id: i64,
+        friends: &[i64],
     ) -> VecDeque<MatchDetailView> {
         let matches = self.result.matches;
         matches
             .into_iter()
-            .map(|m| MatchDetailView::from_match_detail(m, account_id).expect("No account_id matched"))
+            .map(|m| MatchDetailView::from_match_detail(m, account_id, friends).expect("No account_id matched"))
             .collect::<VecDeque<MatchDetailView>>()
     }
 }
 
 #[derive(Deserialize, Debug)]
-struct MatchDetailResult {
+pub struct MatchDetailResult {
     status: i32,
-    matches: Vec<MatchDetail>,
+    pub matches: Vec<MatchDetail>,
 }
 
-#[derive(Deserialize, Debug)]
-struct MatchDetail {
+#[derive(Deserialize, Debug, Clone)]
+pub struct MatchDetail {
     players: Vec<PlayerDetail>,
     radiant_win: bool,
     duration: i32,
     start_time: i64,
-    match_id: i64,
+    pub match_id: i64,
     match_seq_num: i64,
     first_blood_time: i32,
     lobby_type: LobbyType,
@@ -91,18 +92,30 @@ pub struct MatchDetailView {
     radiant_score: i32,
     dire_score: i32,
     player_detail: PlayerDetail,
+    friends: Option<Vec<i64>>,
 }
 
 impl MatchDetailView {
     fn from_match_detail(
         match_detail: MatchDetail,
         account_id: i64,
+        friends: &[i64],
     ) -> Result<Self, crate::Error> {
+        let friends = match_detail
+            .players
+            .iter()
+            .filter(|p| friends.contains(&p.account_id) && p.account_id != account_id)
+            .map(|p| p.account_id)
+            .collect::<Vec<i64>>();
+
+        let friends = if friends.is_empty() { None } else { Some(friends) };
+
         let player_detail = match_detail
             .players
             .into_iter()
             .find(|p| p.account_id == account_id)
             .context(NoneValueSnafu { expected: "PlayerDetail" })?;
+
         Ok(Self {
             win: match_detail.radiant_win && player_detail.player_slot < 128 || !match_detail.radiant_win && player_detail.player_slot >= 128,
             duration: match_detail.duration,
@@ -111,6 +124,7 @@ impl MatchDetailView {
             radiant_score: match_detail.radiant_score,
             dire_score: match_detail.dire_score,
             player_detail,
+            friends,
         })
     }
 
@@ -197,7 +211,7 @@ impl PlayerDetail {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum LobbyType {
     Invalid = -1,
     PublicMatchmaking = 0,
@@ -233,7 +247,7 @@ impl<'de> Deserialize<'de> for LobbyType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum GameMode {
     None = 0,
     AllPick = 1,

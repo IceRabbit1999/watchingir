@@ -1,6 +1,6 @@
 use common::data::{
     constant::{ConstantRequest, ConstantResponse},
-    matches::{MatchDetailResponse, MatchHistoryResponse},
+    matches::{MatchDetail, MatchDetailResponse, MatchHistoryResponse},
 };
 use snafu::{OptionExt, ResultExt};
 
@@ -28,12 +28,15 @@ impl Courier {
         &self,
         key: &str,
         friend_ids: &[i64],
-    ) -> Result<Vec<(MatchDetailResponse, i64)>, crate::Error> {
+    ) -> Result<Vec<(MatchDetail, i64)>, crate::Error> {
         let mut responses = Vec::new();
-        for &account_id in friend_ids {
-            let response = self.latest_match_detail(key, account_id).await?;
-            responses.push((response, account_id));
+        for account_id in friend_ids {
+            let response = self.latest_match_detail(key, *account_id).await?;
+            responses.push((response, *account_id));
         }
+
+        responses.dedup_by(|a, b| a.0.match_id == b.0.match_id);
+
         Ok(responses)
     }
 
@@ -41,13 +44,16 @@ impl Courier {
         &self,
         key: &str,
         account_id: i64,
-    ) -> Result<MatchDetailResponse, crate::Error> {
+    ) -> Result<MatchDetail, crate::Error> {
         let match_history_response = self.get_match_history(key, account_id, 1).await?;
         let seq_num = match_history_response.match_seq_num();
         let seq_num = seq_num.first().context(NoneValueSnafu { expected: "match_seq_num" })?;
 
         let match_detail_response = self.get_match_detail(key, *seq_num, 1).await?;
-        Ok(match_detail_response)
+        let detail = match_detail_response.result.matches.first().context(NoneValueSnafu {
+            expected: "MatchDetail",
+        })?;
+        Ok(detail.clone())
     }
 
     async fn get_match_history(

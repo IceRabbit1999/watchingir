@@ -8,13 +8,10 @@ pub struct Friend {
     is_favorite: bool,
 }
 
-
-
 struct Location {
     col: usize,
     row: usize,
 }
-
 
 // impl DragFriend {
 //     pub fn show(&mut self, ui: &mut egui::Ui) {
@@ -29,14 +26,14 @@ struct Location {
 //                         is_favorite: false,
 //                     });
 //                 }
-                
+
 //                 egui::ScrollArea::vertical().show(ui, |ui| {
 //                     let mut to_favorite = None;
 //                     for (idx, friend) in self.friends.iter_mut().enumerate() {
 //                         if !friend.is_favorite {
 //                             ui.horizontal(|ui| {
-//                                 ui.label(format!("ID: {} - {}", friend.account_id, friend.remark));
-//                                 let response = ui.button("⇒").drag_value();
+//                                 ui.label(format!("ID: {} - {}", friend.account_id,
+// friend.remark));                                 let response = ui.button("⇒").drag_value();
 //                                 if response.dragged() {
 //                                     to_favorite = Some(idx);
 //                                 }
@@ -66,8 +63,8 @@ struct Location {
 //                         if friend.is_favorite {
 //                             ui.horizontal(|ui| {
 //                                 let response = ui.button("⇐").drag_value();
-//                                 ui.label(format!("ID: {} - {}", friend.account_id, friend.remark));
-//                                 if response.dragged() {
+//                                 ui.label(format!("ID: {} - {}", friend.account_id,
+// friend.remark));                                 if response.dragged() {
 //                                     to_normal = Some(idx);
 //                                 }
 //                             });

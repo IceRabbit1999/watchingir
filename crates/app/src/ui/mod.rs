@@ -147,7 +147,7 @@ impl App {
                     let mut view = VecDeque::new();
                     match_detail_response
                         .into_iter()
-                        .for_each(|(detail, account_id)| view.extend(detail.views(account_id)));
+                        .for_each(|(detail, account_id)| view.extend(detail.views(account_id, &account_ids)));
 
                     let mut guard = main_panel.lock();
                     guard.update_match_detail(view);
