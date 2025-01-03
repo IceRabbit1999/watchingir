@@ -8,6 +8,7 @@ use std::{
     sync::Arc,
 };
 
+use common::data::matches::{MatchDetail, MatchDetailView};
 use eframe::{egui, Result};
 use egui::{
     mutex::{Mutex, RwLock},
@@ -144,16 +145,16 @@ impl App {
                 .context(ServerSnafu);
             match res {
                 Ok(match_detail_response) => {
-                    let mut view = VecDeque::new();
-                    match_detail_response
+                    let view = match_detail_response
                         .into_iter()
-                        .for_each(|(detail, account_id)| view.extend(detail.views(account_id, &account_ids)));
+                        .map(|(detail, account_id)| MatchDetailView::from_match_detail(detail, account_id, &account_ids).unwrap())
+                        .collect::<VecDeque<MatchDetailView>>();
 
                     let mut guard = main_panel.lock();
                     guard.update_match_detail(view);
                 }
                 Err(e) => {
-                    error!("Failed to get match detail: {}", e);
+                    error!("Failed to get match detail: {:?}", e);
                 }
             }
         });

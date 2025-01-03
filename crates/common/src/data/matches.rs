@@ -96,7 +96,7 @@ pub struct MatchDetailView {
 }
 
 impl MatchDetailView {
-    fn from_match_detail(
+    pub fn from_match_detail(
         match_detail: MatchDetail,
         account_id: i64,
         friends: &[i64],
